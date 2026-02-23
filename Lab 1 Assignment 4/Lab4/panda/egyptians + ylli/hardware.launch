@@ -1,0 +1,46 @@
+<?xml version="1.0" ?>
+<launch>
+  <arg name="robot_ip" value="10.0.0.2" />
+  <arg name="robot" value="panda"/>
+  <arg name="arm_id" default="panda" />
+  <arg name="load_gripper" default="true" />
+  <arg name="rviz" default="true" />
+
+  <include file="$(find cu_panda_description)/launch/upload_description.launch" />
+
+  <include file="$(find franka_gripper)/launch/franka_gripper.launch" if="$(arg load_gripper)">
+    <arg name="robot_ip" value="$(arg robot_ip)" />
+    <arg name="arm_id"   value="$(arg arm_id)" />
+  </include>
+
+  <node name="franka_control" pkg="franka_control" type="franka_control_node" output="screen" required="true">
+    <rosparam command="load" file="$(find franka_control)/config/franka_control_node.yaml" subst_value="true" />
+    <param name="robot_ip" value="$(arg robot_ip)" />
+  </node>
+
+  <rosparam command="load" file="$(find franka_control)/config/default_controllers.yaml" subst_value="true" />
+  <node name="state_controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="franka_state_controller"/>
+  <node name="traj_controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" args="position_joint_trajectory_controller"/>
+
+  <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" output="screen"/>
+  <node name="joint_state_publisher" type="joint_state_publisher" pkg="joint_state_publisher" output="screen">
+    <rosparam if="$(arg load_gripper)" param="source_list">[franka_state_controller/joint_states, franka_gripper/joint_states] </rosparam>
+    <rosparam unless="$(arg load_gripper)" param="source_list">[franka_state_controller/joint_states] </rosparam>
+    <param name="rate" value="30"/>
+  </node>
+
+  <include file="$(find cu_panda_moveit_config)/launch/move_group.launch" />
+
+  <node name="moveit_by_name" pkg="moveit_by_name" type="moveit_by_name" />
+
+  <include file="$(find cu_logitech_quickcam)/launch/cam.launch" />
+  <param name="cam/camera_frame_id" value="cam"/>
+  <group ns="cam/intrinsic_controls">
+      <param name="brightness" value="0"/>
+      <param name="contrast" value="10"/>
+      <param name="exposure" value="15"/>
+      <param name="gain" value="75"/>
+  </group>
+
+  <include file="$(dirname)/rviz.launch" if="$(arg rviz)" />
+</launch>
