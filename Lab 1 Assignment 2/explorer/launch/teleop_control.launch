@@ -1,0 +1,7 @@
+<launch>
+    <!-- Launch the keyboard teleop node with topic remapping -->
+    <node pkg="turtlesim" type="turtle_teleop_key" name="teleop_controller" output="screen">
+        <!-- Remap from turtlesim's topic to the robot's topic -->
+        <remap from="/turtle1/cmd_vel" to="/cmd_vel"/>
+    </node>
+</launch>
